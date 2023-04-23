@@ -18,9 +18,10 @@ Add the following lines to the project's `CMakeLists.txt` after calling `project
 ```CMake
 include(cmake/CPM.cmake)
 
+
 CPMAddPackage(
-  NAME xyz-cmake-scripts
-  GIT_REPOSITORY ssh://git@bitbucket.org/xyz-robotics/xyz-cmake-scripts.git
+  NAME wm-cmake-scripts
+  GIT_REPOSITORY ssh://git@github.com/wumin199/wm-cmake-scripts.git
   GIT_TAG master
   OPTIONS # set to yes skip cmake formatting
           "FORMAT_SKIP_CMAKE YES"
@@ -154,7 +155,7 @@ target_include_directories(xvl_global SYSTEM PUBLIC ${OpenCV_INCLUDE_DIRS}
 
 # Default Configuration Files
 
-We provide some configuration files used in XYZ Robotics:
+We provide some configuration files used in WM repo:
 
 * .clang-format
 * .cmake-format

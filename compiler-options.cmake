@@ -13,6 +13,15 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
+# @Status: OK
+
+# @Study: option命令用于定义一个开关选项，它可以让用户在构建项目时选择是否启用某些特性或选项。
+# @Study: option(ENABLE_DEBUG "Enable debugging mode" OFF)
+  # option(ENABLE_DEBUG "Enable debugging mode" OFF)
+
+  # if(ENABLE_DEBUG)
+  #   add_definitions(-DDEBUG)
+  # endif()
 option(ALL_WARNINGS "Compile with all warnings for the major compilers" ON)
 option(EFFECTIVE_CXX "Enable Effective C++ warnings" OFF)
 # most of our computers do not support avx512, whereas our CD machines support avx512.
@@ -22,11 +31,13 @@ option(OPENMP "Compile with openmp support under release build" ON)
 
 macro(enable_all_warnings)
   if(ALL_WARNINGS)
+    # @Study: if(MATCHES)用于判断一个字符串是否匹配某个正则表达式
     if(CMAKE_C_COMPILER_ID MATCHES "GNU"
         OR CMAKE_CXX_COMPILER_ID MATCHES "GNU"
         OR CMAKE_C_COMPILER_ID MATCHES "(Apple)?[Cc]lang"
         OR CMAKE_CXX_COMPILER_ID MATCHES "(Apple)?[Cc]lang")
       # GCC/Clang
+      # @Study: CMake的add_compile_options命令可以为目标添加编译选项 (-Wall, -Wextra)
       add_compile_options(-Wall -Wextra -Werror)
     elseif(MSVC)
       # MSVC

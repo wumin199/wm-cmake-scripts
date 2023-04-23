@@ -1,5 +1,5 @@
 
-#@Status: pending
+#@Status: OK
 
 #@Study: 函数用于筛选指定正则表达式匹配的git仓库文件，使用CMake宏cmake_parse_arguments解析输入参数，并通过execute_process调用Git命令获取所有缓存文件列表
 # Regex-filter a git repository's files.
@@ -184,11 +184,11 @@ function(get_cmake_files)
   
   ## @Study: string这是一个 CMake 脚本中的命令，用于将一个字符串变量 ${all_files} 中的所有换行符 \n 替换为分号 ; 并将结果存储在另一个变量 ${filtered_files} 中。
 
-
   string(REPLACE "\n" ";" filtered_files "${all_files}")
+  # @Study: list 将filtered_files按照_REGEX筛选，符合的结果放回filtered_files
   list(FILTER filtered_files INCLUDE REGEX ${_REGEX})  #  ${_REGEX}是上面解析出来的
 
-  # @Study： 这里还不是很懂
+  # @Study： list 将filtered_files的结果按照 CMAKE_FORMAT_EXCLUDE的正则表达式进行排除，输出排除后的列表元素
   if(CMAKE_FORMAT_EXCLUDE)
     list(FILTER filtered_files EXCLUDE REGEX ${CMAKE_FORMAT_EXCLUDE})
   endif()
@@ -209,7 +209,7 @@ endfunction()
 
 # 该函数的主要作用是允许在CMake脚本中调用其他程序来执行需要的操作，例如获取系统信息、运行测试、构建子项目或生成代码等。由于CMake本身不提供所有必需的工具和库，因此execute_process可以用来调用外部工具来完成某些任务。
 
-# @Study: Cmake中指令获取git repo的绝对路径
+# @Study: Cmake中通过git rev-parse --show-toplevel获取git repo的绝对路径
 execute_process(
   COMMAND git rev-parse --show-toplevel
   # OUTPUT_VARIABLE和ERROR_VARIABLE参数分别用于存储命令的标准输出和错误输出
@@ -221,13 +221,32 @@ execute_process(
 # remove trailing whitespace from output
 string(STRIP ${GIT_TOPLEVEL} GIT_TOPLEVEL)
 
+# @Study: get_cmake_files函数，其中OUTPUT_LIST是输出参数，GIT_REPOSITORY_DIR是输入参数
 get_cmake_files(
-  GIT_REPOSITORY_DIR ${GIT_TOPLEVEL} OUTPUT_LIST CMAKE_FILES REGEX
-  "\\.cmake$|(^|/)CMakeLists\\.txt$"
+  GIT_REPOSITORY_DIR ${GIT_TOPLEVEL} 
+  OUTPUT_LIST CMAKE_FILES 
+  REGEX "\\.cmake$|(^|/)CMakeLists\\.txt$"
 )
+## @todo: 正则表达式学习 \\.cmake$|(^|/)CMakeLists\\.txt$
+  # \\.cmake$：表示匹配以 .cmake 结尾的文件名。其中，"." 表示匹配任意一个字符，"\" 表示转义字符，"." 和 "$" 分别表示结尾符号。  
 
+  # 正则表达式 (^|/)CMakeLists\\.txt$ 的含义如下：
+
+  # ^ 表示字符串的开头。
+  # | 表示或，分别连接两个子表达式。
+  # () 表示分组，将表达式组合在一起。
+  # ^|/ 表示字符串的开头或者 / 字符。
+  # / 表示匹配一个 / 字符。
+  # CMakeLists\\.txt 表示匹配 CMakeLists.txt 这个字符串。
+  # $ 表示字符串的结尾。
+  # 因此，(^|/)CMakeLists\\.txt$ 可以匹配以 CMakeLists.txt 结尾的文件名，要么在字符串的开头，要么在 / 字符的后面。例如，CMakeLists.txt 和 /path/to/CMakeLists.txt 都会被匹配到。 -> 不用写*.cmake$
+
+
+# @Study: CMAKE_FORMAT_TARGET可以通过-DCMAKE_FORMAT_TARGET=${name}传递进来
 if(CMAKE_FORMAT_TARGET STREQUAL fix-cmake-format)
+  # -i 表示在原文件上进行修改，而不是输出到标准输出
   execute_process(COMMAND ${CMAKE_FORMAT_PROGRAM} -i ${CMAKE_FILES})
+  # 直接从这个cmake脚本返回了
   return()
 endif()
 
@@ -235,14 +254,26 @@ if(CMAKE_FORMAT_TARGET STREQUAL check-cmake-format)
   set(OUTPUT_QUIET_OPTION OUTPUT_QUIET)
 endif()
 
+# formatted.cmake是后面中通过${CMAKE_FORMAT_PROGRAM} -o后自动生产的formatted.cmake
 set(formatted_cmake_file ${BINARY_DIR}/formatted.cmake)
 foreach(cmake_file IN LISTS CMAKE_FILES)
   set(source_cmake_file ${CMAKE_SOURCE_DIR}/${cmake_file})
+  # 如果将 -i 参数替换为 -o，则 execute_process() 命令的作用将变成将格式化后的内容输出到指定的文件中，而不是直接在原文件上进行修改
   execute_process(COMMAND ${CMAKE_FORMAT_PROGRAM} -o ${formatted_cmake_file} ${source_cmake_file})
   execute_process(
+    ## @Study: git diff --no-index的作用：
+      # --no-index 参数是用来指定 Git 命令不要使用 Git 仓库中的历史记录进行比较，而是直接比较两个文件或目录之间的差异。
+
+      # 举个例子，假设我们有两个文本文件 file1.txt 和 file2.txt，它们并不在同一个 Git 仓库中，但我们想比较这两个文件之间的差异。这时候，我们可以使用 git diff --no-index file1.txt file2.txt 命令，指定要比较的两个文件，然后 Git 会根据文件内容的差异生成相应的差异报告。
+
+      # --no-index 参数还可以用于比较两个目录之间的差异。例如，我们有两个目录 dir1 和 dir2，它们中包含一些不同的文件或子目录。此时，我们可以使用 git diff --no-index dir1 dir2 命令来比较这两个目录之间的差异，并查看它们之间的文件差异以及文件内容的不同之处。
+
+      # 总之，--no-index 参数让 Git 能够直接比较两个文件或目录的差异，而无需使用 Git 仓库中的历史记录。这在比较不同代码库之间的差异时非常有用，也可以用来比较本地未提交的修改和 Git 仓库中的文件之间的差异。
     COMMAND ${GIT_PROGRAM} diff --color --no-index -- ${source_cmake_file} ${formatted_cmake_file}
+    # RESULT_VARIABLE 是 execute_process() 命令的一个可选参数，用于指定执行命令后返回值的变量名。当指定了这个参数时，CMake 会在执行 execute_process() 命令后将命令返回值赋值给该变量，供后续使用。
     RESULT_VARIABLE result ${OUTPUT_QUIET_OPTION}
   )
+  # 表示有诧异结果输出result
   if(OUTPUT_QUIET_OPTION AND result)
     message(FATAL_ERROR "${cmake_file} needs to be reformatted")
   endif()

@@ -5,6 +5,7 @@ set(CMAKE_FORMAT_EXCLUDE
     CACHE STRING "CMake formatting file exclusion pattern."
 )
 
+# @Study: find_program查找可执行程序(e.g. /usr/bin/git(clang-format))
 find_program(CLANG_FORMAT_PROGRAM clang-format)
 find_program(GIT_PROGRAM git)
 find_program(CMAKE_FORMAT_PROGRAM cmake-format)
